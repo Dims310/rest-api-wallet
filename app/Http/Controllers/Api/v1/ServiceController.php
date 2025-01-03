@@ -146,23 +146,34 @@ class ServiceController extends Controller
 
     public function getServicesWithPrices() {
         $servicesPrices = ServicePrice::get();
-        
-        if($servicesPrices->isNotEmpty()) {
+    
+        if ($servicesPrices->isNotEmpty()) {
+            $groupedServices = $servicesPrices->groupBy(function($v) {
+                return $v->service->name;
+            });
+    
+            $response = $groupedServices->map(function($serviceGroup) {
+                return [
+                    'name' => $serviceGroup->first()->service->name,
+                    'prices' => $serviceGroup->map(function($v) {
+                        return [
+                            'role' => $v->role->name,
+                            'price' => $v->price
+                        ];
+                    }),
+                    'last_updated' => $serviceGroup->first()->updated_at
+                ];
+            });
+    
             return response()->json([
                 'error' => false,
                 'data' => [
                     'message' => 'Success get all services',
-                    $servicesPrices->map(function($v) {
-                        return [
-                            'name' => $v->service->name,
-                            'price' => $v->price,
-                            'role' => $v->role->name,
-                            'last_updated' => $v->updated_at
-                        ];
-                    })
+                    'services' => $response
                 ]
             ]);
         }
     }
+    
 
 }
